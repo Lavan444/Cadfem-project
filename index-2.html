@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineering Efficient Airflow with Simulation | CADFEM Blog</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="style.css" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* ── LANGUAGE SWITCHER ── */
+        .lang-switcher {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            margin-left: 14px;
+        }
+
+        .lang-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 6px;
+            padding: 5px 10px 5px 8px;
+            cursor: pointer;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            color: inherit;
+            white-space: nowrap;
+            transition: background 0.18s, border-color 0.18s;
+            user-select: none;
+        }
+
+        .lang-btn:hover {
+            background: rgba(255,255,255,0.16);
+            border-color: rgba(255,255,255,0.35);
+        }
+
+        .lang-btn .flag {
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .lang-btn .chevron {
+            margin-left: 2px;
+            transition: transform 0.2s;
+            opacity: 0.7;
+        }
+
+        .lang-switcher.open .lang-btn .chevron {
+            transform: rotate(180deg);
+        }
+
+        .lang-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.13);
+            min-width: 175px;
+            z-index: 9999;
+            overflow: hidden;
+            animation: dropIn 0.18s ease;
+        }
+
+        @keyframes dropIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .lang-switcher.open .lang-dropdown {
+            display: block;
+        }
+
+        .lang-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13.5px;
+            color: #1a1a2e;
+            transition: background 0.14s;
+        }
+
+        .lang-option:hover {
+            background: #f3f6fb;
+        }
+
+        .lang-option.active {
+            background: #eef3fb;
+            font-weight: 600;
+            color: #0057a8;
+        }
+
+        .lang-option .flag {
+            font-size: 18px;
+        }
+
+        .lang-option .lang-name {
+            flex: 1;
+        }
+
+        .lang-option .check {
+            color: #0057a8;
+            font-size: 12px;
+            opacity: 0;
+        }
+
+        .lang-option.active .check {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Reading progress -->
+    <div id="reading-progress"></div>
+
+    <!-- ── HEADER ── -->
+    <header id="site-header">
+        <div class="header-inner">
+            <a href="#" class="logo-wrap">
+                <img src="cadfem-logo.png" width="180px" />
+            </a>
+            <nav>
+                <a href="#" data-i18n="nav_home">Home</a>
+                <a href="#" class="active" data-i18n="nav_articles">Articles</a>
+                <a href="#" data-i18n="nav_webinars">Webinars</a>
+                <a href="#" data-i18n="nav_products">Products</a>
+                <a href="#" data-i18n="nav_about">About</a>
+            </nav>
+            <div class="header-social">
+                <a href="https://www.linkedin.com/company/cadfem-apac/" title="LinkedIn" target="_blank">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+                        <circle cx="4" cy="4" r="2"/>
+                    </svg>
+                </a>
+                <a href="https://www.facebook.com/cadfem.in" title="Facebook" target="_blank">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+                    </svg>
+                </a>
+                <a href="https://www.instagram.com/cadfem.india/" title="Instagram" target="_blank">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5"/>
+                        <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                    </svg>
+                </a>
+                <a href="https://www.youtube.com/@CADFEMIndia" title="YouTube" target="_blank">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 001.46 6.42 29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58z"/>
+                        <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="white"/>
+                    </svg>
+                </a>
+
+                <!-- ── LANGUAGE SWITCHER ── -->
+                <div class="lang-switcher" id="langSwitcher">
+                    <button class="lang-btn" id="langBtn" onclick="toggleLangDropdown(event)">
+                        <span class="flag" id="currentFlag">🇬🇧</span>
+                        <span id="currentLangName">English</span>
+                        <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <div class="lang-dropdown" id="langDropdown">
+                        <div class="lang-option" onclick="setLanguage('de')" data-lang="de">
+                            <span class="flag">🇩🇪</span>
+                            <span class="lang-name">German</span>
+                            <span class="check">✓</span>
+                        </div>
+                        <div class="lang-option" onclick="setLanguage('id')" data-lang="id">
+                            <span class="flag">🇮🇩</span>
+                            <span class="lang-name">Indonesian</span>
+                            <span class="check">✓</span>
+                        </div>
+                        <div class="lang-option" onclick="setLanguage('ms')" data-lang="ms">
+                            <span class="flag">🇲🇾</span>
+                            <span class="lang-name">Malay</span>
+                            <span class="check">✓</span>
+                        </div>
+                        <div class="lang-option" onclick="setLanguage('th')" data-lang="th">
+                            <span class="flag">🇹🇭</span>
+                            <span class="lang-name">Thai</span>
+                            <span class="check">✓</span>
+                        </div>
+                        <div class="lang-option" onclick="setLanguage('vi')" data-lang="vi">
+                            <span class="flag">🇻🇳</span>
+                            <span class="lang-name">Vietnamese</span>
+                            <span class="check">✓</span>
+                        </div>
+                        <div class="lang-option active" onclick="setLanguage('en')" data-lang="en">
+                            <span class="flag">🇬🇧</span>
+                            <span class="lang-name">English</span>
+                            <span class="check">✓</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── BREADCRUMB ── -->
+    <div class="breadcrumb-bar">
+        <div class="breadcrumb-inner">
+            <a href="#" data-i18n="nav_home">Home</a>
+            <span class="sep">›</span>
+            <a href="#" data-i18n="nav_articles">Article</a>
+            <span class="sep">›</span>
+            <span data-i18n="breadcrumb_current">Ceiling Fan Airflow Simulation</span>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="page-wrap">
+
+        <!-- ARTICLE -->
+        <article id="content">
+            <div class="article-category fade-up fade-up-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span data-i18n="category">CFD Simulation</span>
+            </div>
+
+            <h1 class="fade-up fade-up-2" data-i18n="article_title">Engineering Efficient Airflow with Simulation: Structural, Optimization &amp; Acoustic Insights for Ceiling Fan Design</h1>
+
+            <div class="article-meta fade-up fade-up-3">
+                <div class="meta-author">
+                    <div class="author-avatar">MG</div>
+                    <span class="author-name">Mangesh Shahji Gavade</span>
+                </div>
+                <span class="meta-dot">·</span>
+                <div class="meta-item">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span data-i18n="read_time">06:30 min read</span>
+                </div>
+                <span class="meta-dot">·</span>
+                <div class="meta-item">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span data-i18n="pub_date">January 23, 2026</span>
+                </div>
+                <span class="meta-dot">·</span>
+                <div class="meta-item">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span id="view-count">1,482 <span data-i18n="views">views</span></span>
+                </div>
+            </div>
+
+            <div class="hero-img fade-up fade-up-3">
+                <img src="https://blog.cadfem.ai/wp-content/uploads/2026/01/FBU_Ceiling-Fan-Part-2-Banner-1024x416.jpg"
+                    alt="Ceiling Fan Airflow Simulation Banner"
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="hero-img-placeholder" style="display:none;">
+                    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.5 15.75l7.5-7.5 7.5 7.5"/><path d="M4.5 19.5h15"/></svg>
+                    <span data-i18n="hero_alt">Ceiling Fan Airflow Simulation — Banner</span>
+                </div>
+            </div>
+
+            <div class="article-body">
+
+                <p data-i18n="intro_p1">In <em><strong><a href="#">Part 1</a></strong></em> of this blog series, we explored how Ceiling fan airflow simulation using Ansys Fluent enables accurate airflow prediction and IS 374-compliant performance assessment for ceiling fans — helping engineers optimize designs for better energy efficiency and air delivery without costly physical prototyping.</p>
+
+                <p data-i18n="intro_p2">In <em>Part 2</em> below, we dive deeper into fluid-structure interactions, blade optimization, acoustics, and simulation automation to complete the digital design workflow.</p>
+
+                <h2 id="fsi" data-i18n="fsi_title">Fluid–Structure Interaction (FSI) Analysis of Ceiling Fan Blades</h2>
+
+                <p data-i18n="fsi_p1">During operation, ceiling fan blades are not only subjected to aerodynamic loads but also to <strong>self-weight and centrifugal forces.</strong> If blade design lacks structural capacity, these loads can cause <strong>undesired deformation or failure.</strong></p>
+
+                <p data-i18n="fsi_p2">Under fluid loading, blades deform — changing their shape and, consequently, the airflow patterns they generate which directly impacts <strong>ceiling fan airflow simulation</strong> accuracy. This creates a coupled behavior where the <strong>modified flow affects further blade deformation,</strong> making it critical to capture these interactions early in the design cycle.</p>
+
+                <h3 id="fsi-types" data-i18n="fsi_types_title">One-Way vs Two-Way FSI</h3>
+
+                <div class="fsi-grid">
+                    <div class="fsi-card">
+                        <div class="fsi-badge" data-i18n="oneway_badge">1-WAY FSI</div>
+                        <h4 data-i18n="oneway_title">Unidirectional Coupling</h4>
+                        <p data-i18n="oneway_desc">Transfers pressure data from the fluid solver to the structural solver to evaluate deformation due to fluid loads. Does not capture how the newly deformed shape alters the airflow characteristics.</p>
+                    </div>
+                    <div class="fsi-card two-way">
+                        <div class="fsi-badge" data-i18n="twoway_badge">2-WAY FSI</div>
+                        <h4 data-i18n="twoway_title">System Coupling</h4>
+                        <p data-i18n="twoway_desc">Through Ansys System Coupling, <strong>Ansys Fluent and Ansys Mechanical exchange data iteratively</strong>, predicting blade deformation under equilibrium conditions — offering a more realistic simulation of operational behavior.</p>
+                    </div>
+                </div>
+
+                <div class="figure-wrap">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2026/01/Screenshot-2026-01-28-125005-1024x380.png"
+                        alt="Ansys Workbench System Coupling"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="fig-img-placeholder" style="display:none;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Ansys Workbench — System Coupling Platform
+                    </div>
+                    <div class="figure-caption" data-i18n="fig1_caption">Fig 1: Ansys Workbench platform for System coupling of Fluent &amp; Mechanical Solver</div>
+                </div>
+
+                <div class="video-wrap">
+                    <video class="elementor-video" src="https://blog.cadfem.ai/wp-content/uploads/2026/01/struc_croped.mp4" autoplay="" controls="" controlslist="nodownload"></video>
+                </div>
+
+                <h2 id="morphing" data-i18n="morphing_title">Shape Morphing Using Gradient-Based Optimization</h2>
+
+                <p data-i18n="morphing_p1">Designers seek blade profiles that <strong>maximize airflow and efficiency while maintaining structural integrity,</strong> making ceiling fan airflow simulation essential during early design stages. Traditional parametric optimization (e.g., DOE with Ansys optiSLang) can require significant computational resources.</p>
+
+                <h3 id="gradient" data-i18n="gradient_title">Gradient-Based Optimization</h3>
+
+                <p data-i18n="gradient_p1">A <strong>gradient-based solver,</strong> typically using an <strong>adjoint method,</strong> computes the sensitivity of performance metrics (such as torque or drag) relative to geometric changes. This identifies the regions of the blade most sensitive to performance objectives, such as reducing torque or improving downward flow.</p>
+
+                <p data-i18n="gradient_p2">Once sensitivity regions are known, <strong>Shape Morphing</strong> modifies the mesh locally to explore improved geometries. The process iteratively:</p>
+
+                <ul>
+                    <li data-i18n="li1">Identifies sensitive regions</li>
+                    <li data-i18n="li2">Morphs blade geometry</li>
+                    <li data-i18n="li3">Re-simulates performance</li>
+                    <li data-i18n="li4">Repeats until optimal criteria are met</li>
+                </ul>
+
+                <div class="callout">
+                    <strong>💡 <span data-i18n="callout_label">Key Insight:</span></strong> <span data-i18n="callout_text">This method often reveals <strong>design improvements that traditional parameter sweeps might miss</strong> — especially in nonlinear, complex flow regimes.</span>
+                </div>
+
+                <div class="figure-wrap">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2026/01/Screenshot-2026-01-22-163600.png"
+                        alt="Shape Morphing - Baseline vs Morphed Geometry"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="fig-img-placeholder" style="display:none;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Shape Morphing: Baseline (grey) vs Morphed (green) geometry
+                    </div>
+                    <div class="figure-caption" data-i18n="fig2_caption">Figure 2: Shape morphing — baseline geometry in grey &amp; morphed geometry in green</div>
+                </div>
+
+                <div class="video-wrap">
+                    <video class="elementor-video" src="https://blog.cadfem.ai/wp-content/uploads/2026/01/anim_fan_surf1.mp4" autoplay="" controls="" controlslist="nodownload"></video>
+                </div>
+
+                <div class="figure-wrap">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2026/01/Screenshot-2026-01-28-125057.png"
+                        alt="Optimization torque convergence graph"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="fig-img-placeholder" style="display:none;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Torque Optimization Convergence Graph
+                    </div>
+                    <div class="figure-caption" data-i18n="fig3_caption">Fig 3: Graph indicating the decrease in observable value (torque) for every new optimized shape</div>
+                </div>
+
+                <h3 id="parametric" data-i18n="parametric_title">Blade Optimization through Parametric Studies</h3>
+
+                <p data-i18n="parametric_p1">In addition to gradient-based methods, <strong>multi-objective parametric optimization</strong> (e.g., with Ansys optiSLang) enables systematic exploration of geometric variations against performance goals. These studies can reveal <strong>trade-offs between torque, air delivery, and structural constraints</strong> to guide robust blade designs.</p>
+
+                <h2 id="acoustics" data-i18n="acoustics_title">Acoustics Analysis of Ceiling Fan</h2>
+
+                <p data-i18n="acoustics_p1">Acoustics has become a key differentiator in modern consumer appliances. Ceiling fans are used for long durations, and prolonged exposure to unwanted noise can be uncomfortable for users.</p>
+
+                <p data-i18n="acoustics_p2">From a physics perspective, noise is an acoustic pressure wave that propagates through air and is perceived by the human ear. Fan noise can originate from multiple sources, including air cutting by blades, vibration of fan components, and electric motor excitation. Noise generated due to airflow is referred to as <strong>airborne noise</strong>, while vibration-induced noise is known as <strong>structure-borne noise</strong>.</p>
+
+                <h4 id="tonal" data-i18n="tonal_title">1. Tonal and Broadband Noise Characteristics</h4>
+
+                <p data-i18n="tonal_p1">Fan noise can be classified as tonal or broadband. <strong>Tonal noise</strong> is characterized by discrete, high-amplitude signals at specific frequencies, while <strong>broadband noise</strong> is a lower-amplitude, continuous sound spread across a wide frequency range. Ceiling fans operate at relatively low rotational speeds, placing most broadband noise within the human audible range of 20 Hz to 20 kHz.</p>
+
+                <h4 id="aeroacoustics" data-i18n="aero_title">2. Simulation-Driven Aeroacoustics</h4>
+
+                <p data-i18n="aero_p1">Conducting experimental acoustics studies can be time-consuming and expensive due to multiple test iterations and physical prototyping. Simulation provides an efficient alternative by offering early-stage insights into acoustic performance.</p>
+
+                <p data-i18n="aero_p2">Within CFD simulations, pressure monitors record time-dependent pressure fluctuations. These signals can be post-processed using <strong>Fast Fourier Transformation (FFT)</strong> to analyze noise levels across frequencies. To capture very small pressure variations — down to 2 × 10⁻⁵ Pa — scale-resolving turbulence models are required. Although computationally intensive, the use of GPU-accelerated Ansys Fluent solvers significantly reduces turnaround time.</p>
+
+                <h4 id="propagation" data-i18n="prop_title">3. Sound Propagation Modeling Approaches</h4>
+
+                <p data-i18n="prop_p1">Several methodologies are available for sound propagation analysis, each offering a different balance between accuracy and computational cost. <strong>Computational Aeroacoustics (CAA)</strong> resolves sound propagation directly, providing high fidelity. <strong>Integral methods</strong> such as the Ffowcs-Williams and Hawkings (FWH) model reduce computational cost by solving wave equations for far-field noise prediction. Coupled approaches use dedicated acoustic solvers with CFD-derived source data, while broadband noise models offer fast, steady-state-based directional noise estimates.</p>
+
+                <div class="video-wrap">
+                    <video class="elementor-video" src="https://blog.cadfem.ai/wp-content/uploads/2026/01/vel_scale_resolving.mp4" autoplay="" loop="" controls="" playsinline="" controlslist="nodownload"></video>
+                </div>
+
+                <h3 id="outcomes" data-i18n="outcomes_title">Outcomes of Aeroacoustics Analysis</h3>
+
+                <ul class="outcomes-list">
+                    <li data-i18n="out1">Pressure fluctuations vs. time data — further processed via FFT to frequency domain</li>
+                    <li data-i18n="out2">Sound Pressure Level (SPL) dB vs. frequency — identifies critical high-SPL frequencies</li>
+                    <li data-i18n="out3">A-weighted SPL (dBA) vs. octave bands &amp; 1/3rd octave band frequencies</li>
+                    <li data-i18n="out4">Acoustic source information using DFT analysis for certain frequencies</li>
+                    <li data-i18n="out5">FWH method source FFT analysis for identifying acoustic sources</li>
+                    <li data-i18n="out6">Audio data of the acoustic signal — perceptible in real-time</li>
+                </ul>
+
+                <div class="figure-wrap">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2026/01/Screenshot-2026-01-22-163704.png" alt="SPL vs Frequency" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="fig-img-placeholder" style="display:none;">📊 Fig 4: SPL vs Frequency</div>
+                    <div class="figure-caption" data-i18n="fig4_caption">Fig 4: SPL vs. frequency</div>
+                </div>
+
+                <div class="figure-wrap">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2026/01/Screenshot-2026-01-22-163712.png" alt="SPL A-weighted vs Octave Band" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="fig-img-placeholder" style="display:none;">📊 Fig 5: SPL A-weighted dB vs Octave band frequency</div>
+                    <div class="figure-caption" data-i18n="fig5_caption">Fig 5: SPL A-weighted dB vs. octave band frequency</div>
+                </div>
+
+                <div class="figure-wrap">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2026/01/Screenshot-2026-01-22-163725.png" alt="SPL A-weighted vs 1/3rd Octave Band" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="fig-img-placeholder" style="display:none;">📊 Fig 6: SPL A-weighted dB vs 1/3rd Octave band frequency</div>
+                    <div class="figure-caption" data-i18n="fig6_caption">Fig 6: SPL A-weighted dB vs. 1/3rd octave band frequency</div>
+                </div>
+
+                <div class="audio-section">
+                    <div class="audio-icon">
+                        <svg width="20" height="20" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                            <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+                        </svg>
+                    </div>
+                    <div class="audio-info">
+                        <div class="audio-title" data-i18n="audio_title">Acoustic Signal — CAA Simulation</div>
+                        <div class="audio-subtitle" data-i18n="audio_subtitle">Mic 1 · Receiver data · WAV format</div>
+                    </div>
+                    <button class="audio-btn" data-i18n="audio_btn" onclick="alert('Audio playback: ASound_mic_1_CAA_receiver_data.wav')">▶ Play Sample</button>
+                </div>
+
+                <div class="video-wrap">
+                    <video class="elementor-video" src="https://blog.cadfem.ai/wp-content/uploads/2026/01/anim_dp_dt_1-1.mp4" autoplay="" loop="" controls="" playsinline="" controlslist="nodownload"></video>
+                </div>
+
+                <h2 id="automation" data-i18n="auto_title">IS 374 Air Delivery Testing Automation Using PyFluent</h2>
+
+                <p data-i18n="auto_p1">As simulation workflows grow more complex, automation becomes essential for productivity. IS 374 air delivery testing must be conducted for multiple blade designs, making manual setup repetitive and time-consuming.</p>
+
+                <p data-i18n="auto_p2">Using <strong>PyFluent</strong>, the entire IS 374 simulation workflow can be automated — from model setup and execution to post-processing — ensuring consistency while significantly reducing overall analysis time.</p>
+
+                <div class="video-wrap">
+                    <video class="elementor-video" src="https://blog.cadfem.ai/wp-content/uploads/2026/02/CADFEM-India_s-Video-Jan-29-2026.mp4#t=44,158" autoplay="" loop="" controls="" playsinline="" controlslist="nodownload"></video>
+                </div>
+
+                <div class="conclusion-box">
+                    <h2 id="conclusion" data-i18n="conclusion_title">Conclusion</h2>
+                    <p data-i18n="conclusion_p1">Designing an efficient and reliable ceiling fan requires more than optimizing airflow alone. By integrating fluid–structure interaction, blade optimization, aeroacoustics, and simulation automation, engineers can realistically evaluate blade deformation, improve performance, reduce noise, and accelerate design validation through advanced ceiling fan airflow simulation.</p>
+                    <p data-i18n="conclusion_p2">Together with the aerodynamic insights from Part 1, these advanced Ansys simulation techniques enable a holistic, physics-based approach to ceiling fan design, supporting better engineering decisions with reduced reliance on physical prototyping.</p>
+                </div>
+
+                <!-- Tags -->
+                <div class="tags-wrap">
+                    <a href="#" class="tag">Ansys Fluent</a>
+                    <a href="#" class="tag">CFD</a>
+                    <a href="#" class="tag">FSI</a>
+                    <a href="#" class="tag">Aeroacoustics</a>
+                    <a href="#" class="tag">IS 374</a>
+                    <a href="#" class="tag">PyFluent</a>
+                    <a href="#" class="tag" data-i18n="tag_blade">Blade Optimization</a>
+                    <a href="#" class="tag" data-i18n="tag_sim">Simulation</a>
+                </div>
+
+                <!-- Share -->
+                <div class="share-bar">
+                    <span class="share-label" data-i18n="share_label">Share this article:</span>
+                    <a href="#" class="share-btn linkedin">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+                        LinkedIn
+                    </a>
+                    <a href="#" class="share-btn twitter">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
+                        Twitter
+                    </a>
+                    <button class="share-btn copy" onclick="copyLink()">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        <span data-i18n="copy_link">Copy Link</span>
+                    </button>
+                </div>
+
+            </div>
+        </article>
+
+        <!-- ── SIDEBAR ── -->
+        <aside>
+
+            <!-- Table of Contents -->
+            <div class="widget">
+                <div class="widget-title" data-i18n="toc_title">Table of Contents</div>
+                <ul class="toc-list" id="toc">
+                    <li><a href="#fsi" data-i18n="toc_fsi">Fluid–Structure Interaction</a></li>
+                    <li class="sub"><a href="#fsi-types" data-i18n="toc_fsi_types">One-Way vs Two-Way FSI</a></li>
+                    <li><a href="#morphing" data-i18n="toc_morphing">Shape Morphing & Optimization</a></li>
+                    <li class="sub"><a href="#gradient" data-i18n="toc_gradient">Gradient-Based Method</a></li>
+                    <li class="sub"><a href="#parametric" data-i18n="toc_parametric">Parametric Studies</a></li>
+                    <li><a href="#acoustics" data-i18n="toc_acoustics">Acoustics Analysis</a></li>
+                    <li class="sub"><a href="#tonal" data-i18n="toc_tonal">Tonal & Broadband Noise</a></li>
+                    <li class="sub"><a href="#aeroacoustics" data-i18n="toc_aero">Simulation-Driven Aeroacoustics</a></li>
+                    <li class="sub"><a href="#outcomes" data-i18n="toc_outcomes">Outcomes</a></li>
+                    <li><a href="#automation" data-i18n="toc_automation">IS 374 Automation</a></li>
+                    <li><a href="#conclusion" data-i18n="toc_conclusion">Conclusion</a></li>
+                </ul>
+            </div>
+
+            <!-- Author -->
+            <div class="widget author-widget">
+                <div class="widget-title" data-i18n="author_widget_title">About the Author</div>
+                <div class="author-avatar-lg">MG</div>
+                <div class="name">Mangesh Shahji Gavade</div>
+                <div class="role" data-i18n="author_role">CFD Simulation Engineer · CADFEM India</div>
+                <div class="bio" data-i18n="author_bio">Specializes in fluid–structure interaction, aeroacoustics, and automated simulation workflows using Ansys tools for industrial applications.</div>
+            </div>
+
+            <!-- Newsletter -->
+            <div class="widget newsletter-widget">
+                <div class="widget-title" data-i18n="newsletter_title">Stay Updated</div>
+                <p data-i18n="newsletter_desc">Get the latest simulation insights and engineering articles delivered to your inbox.</p>
+                <div class="newsletter-form">
+                    <input type="email" data-i18n-placeholder="email_placeholder" placeholder="your@email.com">
+                    <button data-i18n="subscribe_btn">Subscribe →</button>
+                </div>
+            </div>
+
+            <!-- Related sidebar -->
+            <div class="widget">
+                <div class="widget-title" data-i18n="related_title">Related Articles</div>
+                <div class="related-list">
+                    <a href="#" class="related-item">
+                        <div class="related-thumb">🚁</div>
+                        <div class="related-info">
+                            <div class="rel-title" data-i18n="related1_title">How to Reduce Drone Noise with Ansys Fluent</div>
+                            <div class="rel-date">Mar 2026</div>
+                        </div>
+                    </a>
+                    <a href="#" class="related-item">
+                        <div class="related-thumb">🌀</div>
+                        <div class="related-info">
+                            <div class="rel-title" data-i18n="related2_title">Ceiling Fan Design by Ansys Fluent Simulation — Part 1</div>
+                            <div class="rel-date">Jan 2026</div>
+                        </div>
+                    </a>
+                    <a href="#" class="related-item">
+                        <div class="related-thumb">❄️</div>
+                        <div class="related-info">
+                            <div class="rel-title" data-i18n="related3_title">Inside Modern Appliances: How CFD Powers Performance &amp; Efficiency</div>
+                            <div class="rel-date">Oct 2025</div>
+                        </div>
+                    </a>
+                    <a href="#" class="related-item">
+                        <div class="related-thumb">⛏️</div>
+                        <div class="related-info">
+                            <div class="rel-title" data-i18n="related4_title">Simplifying Bulk Material Handling with Ansys Rocky</div>
+                            <div class="rel-date">Jul 2025</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+    <!-- ── RELATED BLOGS ── -->
+    <div class="related-blogs-section">
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="related_blogs_title">Related Blogs</h2>
+            <a href="#" class="view-all" data-i18n="view_all">View All ➜</a>
+        </div>
+        <div class="blog-cards">
+            <a href="#" class="blog-card">
+                <div class="card-thumb">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2026/03/Fluent-Q1_-Indonesia_Thumbnail.jpg" alt="Drone Noise" onerror="this.style.display='none';this.parentElement.innerHTML='🚁'">
+                </div>
+                <div class="card-body">
+                    <div class="card-cat">Aeroacoustics</div>
+                    <div class="card-title" data-i18n="related1_title">How to Reduce Drone Noise with Ansys Fluent</div>
+                </div>
+            </a>
+            <a href="#" class="blog-card">
+                <div class="card-thumb">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2025/10/BLOG-Q4_Artboard-2-copy-57-1.jpg" alt="CFD Appliances" onerror="this.style.display='none';this.parentElement.innerHTML='❄️'">
+                </div>
+                <div class="card-body">
+                    <div class="card-cat">CFD</div>
+                    <div class="card-title" data-i18n="related3_title">Inside Modern Appliances: How CFD Powers Performance, Efficiency &amp; Innovation</div>
+                </div>
+            </a>
+            <a href="#" class="blog-card">
+                <div class="card-thumb">
+                    <img src="https://blog.cadfem.ai/wp-content/uploads/2025/07/BLOG-Banners-Q3-2025-09.jpg" alt="Bulk Material Handling" onerror="this.style.display='none';this.parentElement.innerHTML='⛏️'">
+                </div>
+                <div class="card-body">
+                    <div class="card-cat">Simulation</div>
+                    <div class="card-title" data-i18n="related4_title">Simplifying Bulk Material Handling During Monsoon with Ansys Rocky</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="footer-logo">CADFEM <span>APAC</span></div>
+                <p data-i18n="footer_desc">Enabling engineers and scientists to solve complex problems with simulation. Ansys Channel Partner &amp; consulting leader across Asia-Pacific.</p>
+                <div class="footer-social">
+                    <a href="#" title="LinkedIn">in</a>
+                    <a href="#" title="YouTube">▶</a>
+                    <a href="#" title="Instagram">📷</a>
+                    <a href="#" title="Facebook">f</a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4 data-i18n="footer_blog">Blog</h4>
+                <ul>
+                    <li><a href="#" data-i18n="nav_articles">Articles</a></li>
+                    <li><a href="#" data-i18n="nav_webinars">Webinars</a></li>
+                    <li><a href="#" data-i18n="footer_case">Case Studies</a></li>
+                    <li><a href="#" data-i18n="footer_tutorials">Tutorials</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4 data-i18n="footer_company">Company</h4>
+                <ul>
+                    <li><a href="#" data-i18n="footer_about">About CADFEM</a></li>
+                    <li><a href="#" data-i18n="footer_careers">Careers</a></li>
+                    <li><a href="#" data-i18n="footer_contact">Contact</a></li>
+                    <li><a href="#" data-i18n="footer_sitemap">Site Map</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4 data-i18n="footer_legal">Legal</h4>
+                <ul>
+                    <li><a href="#" data-i18n="footer_legal_notices">Legal Notices</a></li>
+                    <li><a href="#" data-i18n="footer_privacy">Privacy Policy</a></li>
+                    <li><a href="#" data-i18n="footer_terms">Terms of Use</a></li>
+                    <li><a href="#" data-i18n="footer_cookie">Cookie Policy</a></li>
+                    <li><a href="#" data-i18n="footer_export">Export Control</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span data-i18n="footer_copy">© Copyright 2026 by CADFEM APAC</span>
+            <div class="footer-bottom-links">
+                <a href="#" data-i18n="footer_privacy">Privacy Policy</a>
+                <a href="#" data-i18n="footer_terms">Terms of Use</a>
+                <a href="#" data-i18n="footer_cookie">Cookie Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Back to Top -->
+    <button id="back-to-top" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+            <polyline points="18 15 12 9 6 15"/>
+        </svg>
+    </button>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" data-i18n="link_copied">Link copied!</div>
+
+    <script>
+    // ══════════════════════════════════════════════
+    //  TRANSLATIONS
+    // ══════════════════════════════════════════════
+    const translations = {
+        en: {
+            flag: '🇬🇧', name: 'English',
+            nav_home: 'Home', nav_articles: 'Articles', nav_webinars: 'Webinars', nav_products: 'Products', nav_about: 'About',
+            breadcrumb_current: 'Ceiling Fan Airflow Simulation',
+            category: 'CFD Simulation',
+            article_title: 'Engineering Efficient Airflow with Simulation: Structural, Optimization & Acoustic Insights for Ceiling Fan Design',
+            read_time: '06:30 min read', pub_date: 'January 23, 2026', views: 'views',
+            hero_alt: 'Ceiling Fan Airflow Simulation — Banner',
+            intro_p1: 'In <em><strong><a href="#">Part 1</a></strong></em> of this blog series, we explored how Ceiling fan airflow simulation using Ansys Fluent enables accurate airflow prediction and IS 374-compliant performance assessment for ceiling fans — helping engineers optimize designs for better energy efficiency and air delivery without costly physical prototyping.',
+            intro_p2: 'In <em>Part 2</em> below, we dive deeper into fluid-structure interactions, blade optimization, acoustics, and simulation automation to complete the digital design workflow.',
+            fsi_title: 'Fluid–Structure Interaction (FSI) Analysis of Ceiling Fan Blades',
+            fsi_p1: 'During operation, ceiling fan blades are not only subjected to aerodynamic loads but also to <strong>self-weight and centrifugal forces.</strong> If blade design lacks structural capacity, these loads can cause <strong>undesired deformation or failure.</strong>',
+            fsi_p2: 'Under fluid loading, blades deform — changing their shape and, consequently, the airflow patterns they generate which directly impacts <strong>ceiling fan airflow simulation</strong> accuracy. This creates a coupled behavior where the <strong>modified flow affects further blade deformation,</strong> making it critical to capture these interactions early in the design cycle.',
+            fsi_types_title: 'One-Way vs Two-Way FSI',
+            oneway_badge: '1-WAY FSI', oneway_title: 'Unidirectional Coupling',
+            oneway_desc: 'Transfers pressure data from the fluid solver to the structural solver to evaluate deformation due to fluid loads. Does not capture how the newly deformed shape alters the airflow characteristics.',
+            twoway_badge: '2-WAY FSI', twoway_title: 'System Coupling',
+            twoway_desc: 'Through Ansys System Coupling, <strong>Ansys Fluent and Ansys Mechanical exchange data iteratively</strong>, predicting blade deformation under equilibrium conditions — offering a more realistic simulation of operational behavior.',
+            fig1_caption: 'Fig 1: Ansys Workbench platform for System coupling of Fluent & Mechanical Solver',
+            morphing_title: 'Shape Morphing Using Gradient-Based Optimization',
+            morphing_p1: 'Designers seek blade profiles that <strong>maximize airflow and efficiency while maintaining structural integrity,</strong> making ceiling fan airflow simulation essential during early design stages. Traditional parametric optimization (e.g., DOE with Ansys optiSLang) can require significant computational resources.',
+            gradient_title: 'Gradient-Based Optimization',
+            gradient_p1: 'A <strong>gradient-based solver,</strong> typically using an <strong>adjoint method,</strong> computes the sensitivity of performance metrics (such as torque or drag) relative to geometric changes. This identifies the regions of the blade most sensitive to performance objectives, such as reducing torque or improving downward flow.',
+            gradient_p2: 'Once sensitivity regions are known, <strong>Shape Morphing</strong> modifies the mesh locally to explore improved geometries. The process iteratively:',
+            li1: 'Identifies sensitive regions', li2: 'Morphs blade geometry', li3: 'Re-simulates performance', li4: 'Repeats until optimal criteria are met',
+            callout_label: 'Key Insight:', callout_text: 'This method often reveals <strong>design improvements that traditional parameter sweeps might miss</strong> — especially in nonlinear, complex flow regimes.',
+            fig2_caption: 'Figure 2: Shape morphing — baseline geometry in grey & morphed geometry in green',
+            fig3_caption: 'Fig 3: Graph indicating the decrease in observable value (torque) for every new optimized shape',
+            parametric_title: 'Blade Optimization through Parametric Studies',
+            parametric_p1: 'In addition to gradient-based methods, <strong>multi-objective parametric optimization</strong> (e.g., with Ansys optiSLang) enables systematic exploration of geometric variations against performance goals. These studies can reveal <strong>trade-offs between torque, air delivery, and structural constraints</strong> to guide robust blade designs.',
+            acoustics_title: 'Acoustics Analysis of Ceiling Fan',
+            acoustics_p1: 'Acoustics has become a key differentiator in modern consumer appliances. Ceiling fans are used for long durations, and prolonged exposure to unwanted noise can be uncomfortable for users.',
+            acoustics_p2: 'From a physics perspective, noise is an acoustic pressure wave that propagates through air and is perceived by the human ear. Fan noise can originate from multiple sources, including air cutting by blades, vibration of fan components, and electric motor excitation. Noise generated due to airflow is referred to as <strong>airborne noise</strong>, while vibration-induced noise is known as <strong>structure-borne noise</strong>.',
+            tonal_title: '1. Tonal and Broadband Noise Characteristics',
+            tonal_p1: 'Fan noise can be classified as tonal or broadband. <strong>Tonal noise</strong> is characterized by discrete, high-amplitude signals at specific frequencies, while <strong>broadband noise</strong> is a lower-amplitude, continuous sound spread across a wide frequency range. Ceiling fans operate at relatively low rotational speeds, placing most broadband noise within the human audible range of 20 Hz to 20 kHz.',
+            aero_title: '2. Simulation-Driven Aeroacoustics',
+            aero_p1: 'Conducting experimental acoustics studies can be time-consuming and expensive due to multiple test iterations and physical prototyping. Simulation provides an efficient alternative by offering early-stage insights into acoustic performance.',
+            aero_p2: 'Within CFD simulations, pressure monitors record time-dependent pressure fluctuations. These signals can be post-processed using <strong>Fast Fourier Transformation (FFT)</strong> to analyze noise levels across frequencies. To capture very small pressure variations — down to 2 × 10⁻⁵ Pa — scale-resolving turbulence models are required. Although computationally intensive, the use of GPU-accelerated Ansys Fluent solvers significantly reduces turnaround time.',
+            prop_title: '3. Sound Propagation Modeling Approaches',
+            prop_p1: 'Several methodologies are available for sound propagation analysis, each offering a different balance between accuracy and computational cost. <strong>Computational Aeroacoustics (CAA)</strong> resolves sound propagation directly, providing high fidelity. <strong>Integral methods</strong> such as the Ffowcs-Williams and Hawkings (FWH) model reduce computational cost by solving wave equations for far-field noise prediction. Coupled approaches use dedicated acoustic solvers with CFD-derived source data, while broadband noise models offer fast, steady-state-based directional noise estimates.',
+            outcomes_title: 'Outcomes of Aeroacoustics Analysis',
+            out1: 'Pressure fluctuations vs. time data — further processed via FFT to frequency domain',
+            out2: 'Sound Pressure Level (SPL) dB vs. frequency — identifies critical high-SPL frequencies',
+            out3: 'A-weighted SPL (dBA) vs. octave bands & 1/3rd octave band frequencies',
+            out4: 'Acoustic source information using DFT analysis for certain frequencies',
+            out5: 'FWH method source FFT analysis for identifying acoustic sources',
+            out6: 'Audio data of the acoustic signal — perceptible in real-time',
+            fig4_caption: 'Fig 4: SPL vs. frequency', fig5_caption: 'Fig 5: SPL A-weighted dB vs. octave band frequency', fig6_caption: 'Fig 6: SPL A-weighted dB vs. 1/3rd octave band frequency',
+            audio_title: 'Acoustic Signal — CAA Simulation', audio_subtitle: 'Mic 1 · Receiver data · WAV format', audio_btn: '▶ Play Sample',
+            auto_title: 'IS 374 Air Delivery Testing Automation Using PyFluent',
+            auto_p1: 'As simulation workflows grow more complex, automation becomes essential for productivity. IS 374 air delivery testing must be conducted for multiple blade designs, making manual setup repetitive and time-consuming.',
+            auto_p2: 'Using <strong>PyFluent</strong>, the entire IS 374 simulation workflow can be automated — from model setup and execution to post-processing — ensuring consistency while significantly reducing overall analysis time.',
+            conclusion_title: 'Conclusion',
+            conclusion_p1: 'Designing an efficient and reliable ceiling fan requires more than optimizing airflow alone. By integrating fluid–structure interaction, blade optimization, aeroacoustics, and simulation automation, engineers can realistically evaluate blade deformation, improve performance, reduce noise, and accelerate design validation through advanced ceiling fan airflow simulation.',
+            conclusion_p2: 'Together with the aerodynamic insights from Part 1, these advanced Ansys simulation techniques enable a holistic, physics-based approach to ceiling fan design, supporting better engineering decisions with reduced reliance on physical prototyping.',
+            tag_blade: 'Blade Optimization', tag_sim: 'Simulation',
+            share_label: 'Share this article:', copy_link: 'Copy Link',
+            toc_title: 'Table of Contents', toc_fsi: 'Fluid–Structure Interaction', toc_fsi_types: 'One-Way vs Two-Way FSI',
+            toc_morphing: 'Shape Morphing & Optimization', toc_gradient: 'Gradient-Based Method', toc_parametric: 'Parametric Studies',
+            toc_acoustics: 'Acoustics Analysis', toc_tonal: 'Tonal & Broadband Noise', toc_aero: 'Simulation-Driven Aeroacoustics',
+            toc_outcomes: 'Outcomes', toc_automation: 'IS 374 Automation', toc_conclusion: 'Conclusion',
+            author_widget_title: 'About the Author', author_role: 'CFD Simulation Engineer · CADFEM India',
+            author_bio: 'Specializes in fluid–structure interaction, aeroacoustics, and automated simulation workflows using Ansys tools for industrial applications.',
+            newsletter_title: 'Stay Updated', newsletter_desc: 'Get the latest simulation insights and engineering articles delivered to your inbox.',
+            email_placeholder: 'your@email.com', subscribe_btn: 'Subscribe →',
+            related_title: 'Related Articles',
+            related1_title: 'How to Reduce Drone Noise with Ansys Fluent',
+            related2_title: 'Ceiling Fan Design by Ansys Fluent Simulation — Part 1',
+            related3_title: 'Inside Modern Appliances: How CFD Powers Performance & Efficiency',
+            related4_title: 'Simplifying Bulk Material Handling with Ansys Rocky',
+            related_blogs_title: 'Related Blogs', view_all: 'View All ➜',
+            footer_desc: 'Enabling engineers and scientists to solve complex problems with simulation. Ansys Channel Partner & consulting leader across Asia-Pacific.',
+            footer_blog: 'Blog', footer_case: 'Case Studies', footer_tutorials: 'Tutorials',
+            footer_company: 'Company', footer_about: 'About CADFEM', footer_careers: 'Careers', footer_contact: 'Contact', footer_sitemap: 'Site Map',
+            footer_legal: 'Legal', footer_legal_notices: 'Legal Notices', footer_privacy: 'Privacy Policy', footer_terms: 'Terms of Use', footer_cookie: 'Cookie Policy', footer_export: 'Export Control',
+            footer_copy: '© Copyright 2026 by CADFEM APAC', link_copied: 'Link copied!'
+        },
+        de: {
+            flag: '🇩🇪', name: 'Deutsch',
+            nav_home: 'Startseite', nav_articles: 'Artikel', nav_webinars: 'Webinare', nav_products: 'Produkte', nav_about: 'Über uns',
+            breadcrumb_current: 'Deckenventilatorsimulation',
+            category: 'CFD-Simulation',
+            article_title: 'Effiziente Luftströmung mit Simulation: Strukturelle, Optimierungs- & Akustische Einblicke für die Deckenventilatorkonstruktion',
+            read_time: '06:30 Min Lesezeit', pub_date: '23. Januar 2026', views: 'Aufrufe',
+            hero_alt: 'Deckenventilatorsimulation — Banner',
+            intro_p1: 'In <em><strong><a href="#">Teil 1</a></strong></em> dieser Blogserie haben wir untersucht, wie die Deckenventilatorsimulation mit Ansys Fluent eine genaue Luftstromvorhersage und IS 374-konforme Leistungsbewertung ermöglicht — und Ingenieuren hilft, Designs für bessere Energieeffizienz zu optimieren.',
+            intro_p2: 'In <em>Teil 2</em> tauchen wir tiefer in Fluid-Struktur-Interaktionen, Schaufeloptimierung, Akustik und Simulationsautomatisierung ein.',
+            fsi_title: 'Fluid-Struktur-Interaktion (FSI) Analyse der Deckenventilatorklingen',
+            fsi_p1: 'Während des Betriebs sind Deckenventilatorklingen nicht nur aerodynamischen Lasten ausgesetzt, sondern auch <strong>Eigengewicht und Zentrifugalkräften.</strong> Wenn die Schaufelkonstruktion keine ausreichende Tragfähigkeit aufweist, können diese Lasten zu <strong>unerwünschter Verformung oder zum Versagen führen.</strong>',
+            fsi_p2: 'Unter Fluidbelastung verformen sich die Schaufeln — was ihre Form und folglich die erzeugten Luftstrommuster verändert und die Genauigkeit der <strong>Deckenventilatorsimulation</strong> direkt beeinflusst.',
+            fsi_types_title: 'Einweg- vs. Zweiweg-FSI',
+            oneway_badge: '1-WEG FSI', oneway_title: 'Unidirektionale Kopplung',
+            oneway_desc: 'Überträgt Druckdaten vom Fluid-Solver zum Struktur-Solver zur Bewertung der Verformung durch Fluidlasten. Erfasst nicht, wie die neu verformte Form die Luftstromeigenschaften verändert.',
+            twoway_badge: '2-WEG FSI', twoway_title: 'Systemkopplung',
+            twoway_desc: 'Durch Ansys Systemkopplung <strong>tauschen Ansys Fluent und Ansys Mechanical Daten iterativ aus</strong> und prognostizieren die Schaufelverformung unter Gleichgewichtsbedingungen.',
+            fig1_caption: 'Abb. 1: Ansys Workbench-Plattform für die Systemkopplung von Fluent & Mechanical Solver',
+            morphing_title: 'Formveränderung mit gradientenbasierter Optimierung',
+            morphing_p1: 'Designer suchen nach Schaufelgeometrien, die <strong>Luftstrom und Effizienz maximieren und gleichzeitig die strukturelle Integrität erhalten.</strong> Traditionelle parametrische Optimierung kann erhebliche Rechenressourcen erfordern.',
+            gradient_title: 'Gradientenbasierte Optimierung',
+            gradient_p1: 'Ein <strong>gradientenbasierter Solver</strong> mit <strong>adjungierten Methoden</strong> berechnet die Empfindlichkeit von Leistungsmetriken (wie Drehmoment oder Widerstand) gegenüber geometrischen Änderungen.',
+            gradient_p2: 'Sobald empfindliche Bereiche bekannt sind, modifiziert die <strong>Formveränderung</strong> das Netz lokal. Der Prozess arbeitet iterativ:',
+            li1: 'Identifiziert empfindliche Bereiche', li2: 'Morpht die Schaufelgeometrie', li3: 'Simuliert die Leistung neu', li4: 'Wiederholt bis optimale Kriterien erfüllt sind',
+            callout_label: 'Wichtige Erkenntnis:', callout_text: 'Diese Methode enthüllt oft <strong>Designverbesserungen, die traditionelle Parameterstudien verpassen könnten</strong> — besonders in nichtlinearen, komplexen Strömungsregimen.',
+            fig2_caption: 'Abbildung 2: Formveränderung — Basisgeometrie in Grau & veränderte Geometrie in Grün',
+            fig3_caption: 'Abb. 3: Diagramm des Rückgangs des Beobachtungswertes (Drehmoment) für jede neue optimierte Form',
+            parametric_title: 'Schaufeloptimierung durch parametrische Studien',
+            parametric_p1: 'Zusätzlich zu gradientenbasierten Methoden ermöglicht <strong>mehrzielige parametrische Optimierung</strong> die systematische Untersuchung geometrischer Variationen.',
+            acoustics_title: 'Akustikanalyse des Deckenventilators',
+            acoustics_p1: 'Akustik ist zu einem wichtigen Differenzierungsmerkmal bei modernen Haushaltsgeräten geworden. Deckenventileatoren werden über lange Zeiträume verwendet, und eine längere Exposition gegenüber unerwünschtem Lärm kann unangenehm sein.',
+            acoustics_p2: 'Aus physikalischer Sicht ist Lärm eine akustische Druckwelle. Ventilatorkölärm kann als <strong>Luftschall</strong> (durch Luftströmung) oder <strong>Körperschall</strong> (durch Vibration) klassifiziert werden.',
+            tonal_title: '1. Tonale und Breitbandgeräuscheigenschaften',
+            tonal_p1: 'Ventilatorkölärm kann als tonal oder breitbandig klassifiziert werden. <strong>Tonaler Lärm</strong> zeichnet sich durch diskrete Signale bei bestimmten Frequenzen aus, während <strong>Breitbandlärm</strong> ein kontinuierlicher Klang über einen breiten Frequenzbereich ist.',
+            aero_title: '2. Simulationsgestützte Aeroakustik',
+            aero_p1: 'Experimentelle Akustikstudien können zeitaufwendig und teuer sein. Simulation bietet eine effiziente Alternative.',
+            aero_p2: 'In CFD-Simulationen zeichnen Druckmonitore zeitabhängige Druckschwankungen auf. Diese Signale können mittels <strong>Fourier-Transformation (FFT)</strong> nachbearbeitet werden.',
+            prop_title: '3. Schallausbreitungsmodellierungsansätze',
+            prop_p1: 'Verschiedene Methoden sind für die Schallausbreitungsanalyse verfügbar. <strong>Computational Aeroacoustics (CAA)</strong> löst die Schallausbreitung direkt mit hoher Genauigkeit. <strong>Integrale Methoden</strong> wie das FWH-Modell reduzieren den Rechenaufwand.',
+            outcomes_title: 'Ergebnisse der Aeroakustikanalyse',
+            out1: 'Druckschwankungen vs. Zeit — weiterverarbeitet per FFT in den Frequenzbereich',
+            out2: 'Schalldruckpegel (SPL) dB vs. Frequenz', out3: 'A-bewerteter SPL (dBA) vs. Oktavbänder',
+            out4: 'Akustische Quellinformationen per DFT-Analyse', out5: 'FWH-Quellen-FFT-Analyse', out6: 'Audiodaten des akustischen Signals',
+            fig4_caption: 'Abb. 4: SPL vs. Frequenz', fig5_caption: 'Abb. 5: A-gewichteter SPL dB vs. Oktavband', fig6_caption: 'Abb. 6: A-gewichteter SPL dB vs. 1/3-Oktavband',
+            audio_title: 'Akustisches Signal — CAA-Simulation', audio_subtitle: 'Mikrofon 1 · Empfängerdaten · WAV-Format', audio_btn: '▶ Beispiel abspielen',
+            auto_title: 'IS 374 Luftlieferungstests Automatisierung mit PyFluent',
+            auto_p1: 'Da Simulationsworkflows komplexer werden, ist Automatisierung für die Produktivität unerlässlich.',
+            auto_p2: 'Mit <strong>PyFluent</strong> kann der gesamte IS 374-Simulationsworkflow automatisiert werden.',
+            conclusion_title: 'Fazit',
+            conclusion_p1: 'Die Entwicklung eines effizienten Deckenventilators erfordert mehr als die Optimierung des Luftstroms allein. Durch die Integration von FSI, Schaufeloptimierung, Aeroakustik und Simulationsautomatisierung können Ingenieure realistische Bewertungen durchführen.',
+            conclusion_p2: 'Zusammen mit den aerodynamischen Erkenntnissen aus Teil 1 ermöglichen diese Ansys-Simulationstechniken einen ganzheitlichen Ansatz zur Deckenventilatorkonstruktion.',
+            tag_blade: 'Schaufeloptimierung', tag_sim: 'Simulation',
+            share_label: 'Artikel teilen:', copy_link: 'Link kopieren',
+            toc_title: 'Inhaltsverzeichnis', toc_fsi: 'Fluid-Struktur-Interaktion', toc_fsi_types: 'Einweg- vs. Zweiweg-FSI',
+            toc_morphing: 'Formveränderung & Optimierung', toc_gradient: 'Gradientenbasierte Methode', toc_parametric: 'Parametrische Studien',
+            toc_acoustics: 'Akustikanalyse', toc_tonal: 'Tonaler & Breitbandlärm', toc_aero: 'Simulationsgestützte Aeroakustik',
+            toc_outcomes: 'Ergebnisse', toc_automation: 'IS 374 Automatisierung', toc_conclusion: 'Fazit',
+            author_widget_title: 'Über den Autor', author_role: 'CFD-Simulationsingenieur · CADFEM India',
+            author_bio: 'Spezialisiert auf Fluid-Struktur-Interaktion, Aeroakustik und automatisierte Simulationsworkflows mit Ansys-Tools.',
+            newsletter_title: 'Bleiben Sie informiert', newsletter_desc: 'Erhalten Sie die neuesten Simulationseinblicke direkt in Ihren Posteingang.',
+            email_placeholder: 'ihre@email.com', subscribe_btn: 'Abonnieren →',
+            related_title: 'Verwandte Artikel',
+            related1_title: 'Wie man Drohnenlärm mit Ansys Fluent reduziert',
+            related2_title: 'Deckenventilatorkonstruktion mit Ansys Fluent — Teil 1',
+            related3_title: 'Moderne Haushaltsgeräte: Wie CFD Leistung & Effizienz steigert',
+            related4_title: 'Schüttguthandling vereinfachen mit Ansys Rocky',
+            related_blogs_title: 'Verwandte Blogs', view_all: 'Alle anzeigen ➜',
+            footer_desc: 'Ingenieure und Wissenschaftler bei der Lösung komplexer Probleme mit Simulation unterstützen. Ansys Channel Partner in Asien-Pazifik.',
+            footer_blog: 'Blog', footer_case: 'Fallstudien', footer_tutorials: 'Tutorials',
+            footer_company: 'Unternehmen', footer_about: 'Über CADFEM', footer_careers: 'Karriere', footer_contact: 'Kontakt', footer_sitemap: 'Seitenstruktur',
+            footer_legal: 'Rechtliches', footer_legal_notices: 'Rechtliche Hinweise', footer_privacy: 'Datenschutz', footer_terms: 'Nutzungsbedingungen', footer_cookie: 'Cookie-Richtlinie', footer_export: 'Exportkontrolle',
+            footer_copy: '© Copyright 2026 von CADFEM APAC', link_copied: 'Link kopiert!'
+        },
+        id: {
+            flag: '🇮🇩', name: 'Indonesia',
+            nav_home: 'Beranda', nav_articles: 'Artikel', nav_webinars: 'Webinar', nav_products: 'Produk', nav_about: 'Tentang',
+            breadcrumb_current: 'Simulasi Aliran Kipas Langit-langit',
+            category: 'Simulasi CFD',
+            article_title: 'Rekayasa Aliran Udara Efisien dengan Simulasi: Wawasan Struktural, Optimasi & Akustik untuk Desain Kipas Langit-langit',
+            read_time: '06:30 menit baca', pub_date: '23 Januari 2026', views: 'tampilan',
+            hero_alt: 'Simulasi Aliran Kipas Langit-langit — Banner',
+            intro_p1: 'Dalam <em><strong><a href="#">Bagian 1</a></strong></em> dari seri blog ini, kami mengeksplorasi bagaimana simulasi aliran kipas langit-langit menggunakan Ansys Fluent memungkinkan prediksi aliran udara yang akurat dan penilaian kinerja sesuai IS 374.',
+            intro_p2: 'Dalam <em>Bagian 2</em> ini, kami menyelami lebih dalam interaksi fluida-struktur, optimasi bilah, akustik, dan otomasi simulasi.',
+            fsi_title: 'Analisis Interaksi Fluida-Struktur (FSI) pada Bilah Kipas',
+            fsi_p1: 'Selama operasi, bilah kipas tidak hanya mengalami beban aerodinamis tetapi juga <strong>berat sendiri dan gaya sentrifugal.</strong> Jika desain bilah kekurangan kapasitas struktural, beban ini dapat menyebabkan <strong>deformasi atau kegagalan yang tidak diinginkan.</strong>',
+            fsi_p2: 'Saat bilah mengalami deformasi, pola aliran udara yang dihasilkan berubah sehingga berdampak pada akurasi <strong>simulasi aliran kipas langit-langit.</strong>',
+            fsi_types_title: 'FSI Satu Arah vs Dua Arah',
+            oneway_badge: 'FSI 1 ARAH', oneway_title: 'Kopling Searah',
+            oneway_desc: 'Mentransfer data tekanan dari solver fluida ke solver struktural untuk mengevaluasi deformasi akibat beban fluida. Tidak menangkap bagaimana bentuk yang terdeformasi mengubah karakteristik aliran udara.',
+            twoway_badge: 'FSI 2 ARAH', twoway_title: 'Kopling Sistem',
+            twoway_desc: 'Melalui Ansys System Coupling, <strong>Ansys Fluent dan Ansys Mechanical bertukar data secara iteratif</strong>, memprediksi deformasi bilah dalam kondisi keseimbangan.',
+            fig1_caption: 'Gambar 1: Platform Ansys Workbench untuk penggabungan sistem Fluent & Mechanical Solver',
+            morphing_title: 'Morphing Bentuk Menggunakan Optimasi Berbasis Gradien',
+            morphing_p1: 'Desainer mencari profil bilah yang <strong>memaksimalkan aliran udara dan efisiensi sambil mempertahankan integritas struktural.</strong> Optimasi parametrik tradisional dapat memerlukan sumber daya komputasi yang signifikan.',
+            gradient_title: 'Optimasi Berbasis Gradien',
+            gradient_p1: 'Sebuah <strong>solver berbasis gradien</strong> menggunakan <strong>metode adjoint</strong> untuk menghitung sensitivitas metrik kinerja terhadap perubahan geometri.',
+            gradient_p2: 'Setelah wilayah sensitif diketahui, <strong>Morphing Bentuk</strong> memodifikasi mesh secara lokal. Prosesnya berjalan iteratif:',
+            li1: 'Mengidentifikasi wilayah sensitif', li2: 'Morphing geometri bilah', li3: 'Mensimulasikan ulang kinerja', li4: 'Mengulangi hingga kriteria optimal terpenuhi',
+            callout_label: 'Wawasan Kunci:', callout_text: 'Metode ini sering mengungkapkan <strong>peningkatan desain yang mungkin terlewatkan oleh parameter sweep tradisional</strong> — terutama dalam rezim aliran yang kompleks.',
+            fig2_caption: 'Gambar 2: Morphing bentuk — geometri dasar berwarna abu-abu & geometri termorph berwarna hijau',
+            fig3_caption: 'Gambar 3: Grafik penurunan nilai yang diamati (torsi) untuk setiap bentuk yang dioptimalkan',
+            parametric_title: 'Optimasi Bilah melalui Studi Parametrik',
+            parametric_p1: 'Selain metode berbasis gradien, <strong>optimasi parametrik multi-tujuan</strong> memungkinkan eksplorasi sistematis variasi geometri.',
+            acoustics_title: 'Analisis Akustik Kipas Langit-langit',
+            acoustics_p1: 'Akustik telah menjadi pembeda utama dalam peralatan konsumen modern. Kipas langit-langit digunakan dalam jangka waktu lama.',
+            acoustics_p2: 'Dari perspektif fisika, kebisingan adalah gelombang tekanan akustik. Kebisingan kipas dapat dikategorikan sebagai <strong>kebisingan udara</strong> atau <strong>kebisingan struktur.</strong>',
+            tonal_title: '1. Karakteristik Kebisingan Tonal dan Broadband',
+            tonal_p1: 'Kebisingan kipas dapat diklasifikasikan sebagai tonal atau broadband. <strong>Kebisingan tonal</strong> ditandai dengan sinyal amplitudo tinggi pada frekuensi tertentu, sementara <strong>kebisingan broadband</strong> adalah suara kontinu.',
+            aero_title: '2. Aeroakustik Berbasis Simulasi',
+            aero_p1: 'Studi akustik eksperimental bisa memakan waktu dan biaya. Simulasi menyediakan alternatif yang efisien.',
+            aero_p2: 'Dalam simulasi CFD, monitor tekanan merekam fluktuasi tekanan. Sinyal ini dapat diproses menggunakan <strong>Fast Fourier Transformation (FFT).</strong>',
+            prop_title: '3. Pendekatan Pemodelan Propagasi Suara',
+            prop_p1: 'Beberapa metodologi tersedia untuk analisis propagasi suara. <strong>Computational Aeroacoustics (CAA)</strong> menyelesaikan propagasi suara secara langsung. <strong>Metode integral</strong> seperti model FWH mengurangi biaya komputasi.',
+            outcomes_title: 'Hasil Analisis Aeroakustik',
+            out1: 'Fluktuasi tekanan vs. data waktu — diproses via FFT ke domain frekuensi',
+            out2: 'Tingkat Tekanan Suara (SPL) dB vs. frekuensi', out3: 'SPL berbobot-A (dBA) vs. pita oktaf',
+            out4: 'Informasi sumber akustik menggunakan analisis DFT', out5: 'Analisis FFT sumber metode FWH', out6: 'Data audio sinyal akustik',
+            fig4_caption: 'Gambar 4: SPL vs. frekuensi', fig5_caption: 'Gambar 5: SPL berbobot-A dB vs. pita oktaf', fig6_caption: 'Gambar 6: SPL berbobot-A dB vs. pita 1/3 oktaf',
+            audio_title: 'Sinyal Akustik — Simulasi CAA', audio_subtitle: 'Mikrofon 1 · Data penerima · Format WAV', audio_btn: '▶ Putar Sampel',
+            auto_title: 'Otomasi Pengujian Pengiriman Udara IS 374 Menggunakan PyFluent',
+            auto_p1: 'Seiring bertambahnya kompleksitas alur kerja simulasi, otomasi menjadi penting untuk produktivitas.',
+            auto_p2: 'Menggunakan <strong>PyFluent</strong>, seluruh alur kerja simulasi IS 374 dapat diotomasi.',
+            conclusion_title: 'Kesimpulan',
+            conclusion_p1: 'Merancang kipas langit-langit yang efisien memerlukan lebih dari sekadar mengoptimalkan aliran udara. Dengan mengintegrasikan FSI, optimasi bilah, aeroakustik, dan otomasi simulasi, insinyur dapat melakukan evaluasi yang realistis.',
+            conclusion_p2: 'Bersama dengan wawasan aerodinamis dari Bagian 1, teknik simulasi Ansys ini memungkinkan pendekatan komprehensif terhadap desain kipas langit-langit.',
+            tag_blade: 'Optimasi Bilah', tag_sim: 'Simulasi',
+            share_label: 'Bagikan artikel ini:', copy_link: 'Salin Tautan',
+            toc_title: 'Daftar Isi', toc_fsi: 'Interaksi Fluida-Struktur', toc_fsi_types: 'FSI Satu vs Dua Arah',
+            toc_morphing: 'Morphing Bentuk & Optimasi', toc_gradient: 'Metode Berbasis Gradien', toc_parametric: 'Studi Parametrik',
+            toc_acoustics: 'Analisis Akustik', toc_tonal: 'Kebisingan Tonal & Broadband', toc_aero: 'Aeroakustik Berbasis Simulasi',
+            toc_outcomes: 'Hasil', toc_automation: 'Otomasi IS 374', toc_conclusion: 'Kesimpulan',
+            author_widget_title: 'Tentang Penulis', author_role: 'Insinyur Simulasi CFD · CADFEM India',
+            author_bio: 'Spesialis dalam interaksi fluida-struktur, aeroakustik, dan alur kerja simulasi otomatis menggunakan alat Ansys.',
+            newsletter_title: 'Tetap Terupdate', newsletter_desc: 'Dapatkan wawasan simulasi dan artikel teknik terbaru langsung ke kotak masuk Anda.',
+            email_placeholder: 'email@anda.com', subscribe_btn: 'Berlangganan →',
+            related_title: 'Artikel Terkait',
+            related1_title: 'Cara Mengurangi Kebisingan Drone dengan Ansys Fluent',
+            related2_title: 'Desain Kipas Langit-langit dengan Simulasi Ansys Fluent — Bagian 1',
+            related3_title: 'Peralatan Modern: Bagaimana CFD Mendorong Kinerja & Efisiensi',
+            related4_title: 'Menyederhanakan Penanganan Material Curah dengan Ansys Rocky',
+            related_blogs_title: 'Blog Terkait', view_all: 'Lihat Semua ➜',
+            footer_desc: 'Membantu insinyur dan ilmuwan memecahkan masalah kompleks dengan simulasi. Mitra Saluran Ansys di Asia-Pasifik.',
+            footer_blog: 'Blog', footer_case: 'Studi Kasus', footer_tutorials: 'Tutorial',
+            footer_company: 'Perusahaan', footer_about: 'Tentang CADFEM', footer_careers: 'Karier', footer_contact: 'Kontak', footer_sitemap: 'Peta Situs',
+            footer_legal: 'Hukum', footer_legal_notices: 'Pemberitahuan Hukum', footer_privacy: 'Kebijakan Privasi', footer_terms: 'Ketentuan Penggunaan', footer_cookie: 'Kebijakan Cookie', footer_export: 'Kontrol Ekspor',
+            footer_copy: '© Hak Cipta 2026 oleh CADFEM APAC', link_copied: 'Tautan disalin!'
+        },
+        ms: {
+            flag: '🇲🇾', name: 'Melayu',
+            nav_home: 'Laman Utama', nav_articles: 'Artikel', nav_webinars: 'Webinar', nav_products: 'Produk', nav_about: 'Tentang',
+            breadcrumb_current: 'Simulasi Aliran Kipas Siling',
+            category: 'Simulasi CFD',
+            article_title: 'Kejuruteraan Aliran Udara Cekap dengan Simulasi: Wawasan Struktural, Pengoptimuman & Akustik untuk Reka Bentuk Kipas Siling',
+            read_time: '06:30 min baca', pub_date: '23 Januari 2026', views: 'paparan',
+            hero_alt: 'Simulasi Aliran Kipas Siling — Banner',
+            intro_p1: 'Dalam <em><strong><a href="#">Bahagian 1</a></strong></em> siri blog ini, kami meneroka bagaimana simulasi aliran kipas siling menggunakan Ansys Fluent membolehkan ramalan aliran udara yang tepat dan penilaian prestasi yang mematuhi IS 374.',
+            intro_p2: 'Dalam <em>Bahagian 2</em> ini, kami menyelami lebih dalam interaksi bendalir-struktur, pengoptimuman bilah, akustik, dan automasi simulasi.',
+            fsi_title: 'Analisis Interaksi Bendalir-Struktur (FSI) Bilah Kipas Siling',
+            fsi_p1: 'Semasa operasi, bilah kipas siling bukan sahaja tertakluk kepada beban aerodinamik tetapi juga <strong>berat sendiri dan daya emparan.</strong> Jika reka bentuk bilah kekurangan kapasiti struktur, beban ini boleh menyebabkan <strong>ubah bentuk atau kegagalan yang tidak diingini.</strong>',
+            fsi_p2: 'Di bawah beban bendalir, bilah berubah bentuk — mengubah corak aliran udara yang dihasilkan yang mempengaruhi ketepatan <strong>simulasi aliran kipas siling.</strong>',
+            fsi_types_title: 'FSI Satu Hala vs Dua Hala',
+            oneway_badge: 'FSI 1 HALA', oneway_title: 'Gandingan Unidireksional',
+            oneway_desc: 'Memindahkan data tekanan dari penyelesai bendalir ke penyelesai struktur untuk menilai ubah bentuk akibat beban bendalir.',
+            twoway_badge: 'FSI 2 HALA', twoway_title: 'Gandingan Sistem',
+            twoway_desc: 'Melalui Ansys System Coupling, <strong>Ansys Fluent dan Ansys Mechanical bertukar data secara berulang</strong>, meramalkan ubah bentuk bilah dalam keadaan keseimbangan.',
+            fig1_caption: 'Rajah 1: Platform Ansys Workbench untuk gandingan sistem Fluent & Penyelesai Mekanikal',
+            morphing_title: 'Pembentukan Semula Menggunakan Pengoptimuman Berasaskan Kecerunan',
+            morphing_p1: 'Pereka mencari profil bilah yang <strong>memaksimumkan aliran udara dan kecekapan sambil mengekalkan integriti struktur.</strong> Pengoptimuman parametrik tradisional boleh memerlukan sumber pengkomputeran yang signifikan.',
+            gradient_title: 'Pengoptimuman Berasaskan Kecerunan',
+            gradient_p1: 'Penyelesai <strong>berasaskan kecerunan</strong> menggunakan <strong>kaedah adjoint</strong> mengira kepekaan metrik prestasi terhadap perubahan geometri.',
+            gradient_p2: 'Apabila kawasan sensitif diketahui, <strong>Pembentukan Semula</strong> mengubah suai mesh secara tempatan. Proses ini berulang:',
+            li1: 'Mengenal pasti kawasan sensitif', li2: 'Membentuk semula geometri bilah', li3: 'Mensimulasi semula prestasi', li4: 'Berulang sehingga kriteria optimum dipenuhi',
+            callout_label: 'Pandangan Utama:', callout_text: 'Kaedah ini sering mendedahkan <strong>peningkatan reka bentuk yang mungkin terlepas oleh sapuan parameter tradisional</strong> — terutama dalam rejim aliran kompleks.',
+            fig2_caption: 'Rajah 2: Pembentukan semula — geometri asas berwarna kelabu & geometri dibentuk semula berwarna hijau',
+            fig3_caption: 'Rajah 3: Graf menunjukkan penurunan nilai yang diperhatikan (daya kilas) untuk setiap bentuk yang dioptimumkan',
+            parametric_title: 'Pengoptimuman Bilah melalui Kajian Parametrik',
+            parametric_p1: 'Selain kaedah berasaskan kecerunan, <strong>pengoptimuman parametrik pelbagai objektif</strong> membolehkan penerokaan sistematik variasi geometri.',
+            acoustics_title: 'Analisis Akustik Kipas Siling',
+            acoustics_p1: 'Akustik telah menjadi pembeza utama dalam peralatan pengguna moden. Kipas siling digunakan untuk jangka masa yang lama.',
+            acoustics_p2: 'Dari perspektif fizik, bunyi bising adalah gelombang tekanan akustik. Bunyi kipas boleh dikategorikan sebagai <strong>bunyi bising udara</strong> atau <strong>bunyi bising struktur.</strong>',
+            tonal_title: '1. Ciri-ciri Bunyi Bising Tonal dan Jalur Lebar',
+            tonal_p1: 'Bunyi bising kipas boleh diklasifikasikan sebagai tonal atau jalur lebar. <strong>Bunyi bising tonal</strong> dicirikan oleh isyarat amplitud tinggi pada frekuensi tertentu.',
+            aero_title: '2. Aeroakustik Berasaskan Simulasi',
+            aero_p1: 'Kajian akustik eksperimental boleh memakan masa dan mahal. Simulasi menyediakan alternatif yang cekap.',
+            aero_p2: 'Dalam simulasi CFD, monitor tekanan merekod turun naik tekanan. Isyarat ini boleh diproses menggunakan <strong>Fast Fourier Transformation (FFT).</strong>',
+            prop_title: '3. Pendekatan Pemodelan Perambatan Bunyi',
+            prop_p1: 'Beberapa metodologi tersedia untuk analisis perambatan bunyi. <strong>Computational Aeroacoustics (CAA)</strong> menyelesaikan perambatan bunyi secara langsung. <strong>Kaedah integral</strong> seperti model FWH mengurangkan kos pengkomputeran.',
+            outcomes_title: 'Hasil Analisis Aeroakustik',
+            out1: 'Data turun naik tekanan vs. masa — diproses lanjut melalui FFT ke domain frekuensi',
+            out2: 'Aras Tekanan Bunyi (SPL) dB vs. frekuensi', out3: 'SPL berwajaran-A (dBA) vs. jalur oktaf',
+            out4: 'Maklumat sumber akustik menggunakan analisis DFT', out5: 'Analisis FFT sumber kaedah FWH', out6: 'Data audio isyarat akustik',
+            fig4_caption: 'Rajah 4: SPL vs. frekuensi', fig5_caption: 'Rajah 5: SPL berwajaran-A dB vs. jalur oktaf', fig6_caption: 'Rajah 6: SPL berwajaran-A dB vs. jalur 1/3 oktaf',
+            audio_title: 'Isyarat Akustik — Simulasi CAA', audio_subtitle: 'Mikrofon 1 · Data penerima · Format WAV', audio_btn: '▶ Main Sampel',
+            auto_title: 'Automasi Ujian Penghantaran Udara IS 374 Menggunakan PyFluent',
+            auto_p1: 'Apabila aliran kerja simulasi semakin kompleks, automasi menjadi penting untuk produktiviti.',
+            auto_p2: 'Menggunakan <strong>PyFluent</strong>, keseluruhan aliran kerja simulasi IS 374 boleh diotomatikkan.',
+            conclusion_title: 'Kesimpulan',
+            conclusion_p1: 'Mereka bentuk kipas siling yang cekap memerlukan lebih daripada sekadar mengoptimumkan aliran udara. Dengan mengintegrasikan FSI, pengoptimuman bilah, aeroakustik, dan automasi simulasi, jurutera boleh membuat penilaian yang realistik.',
+            conclusion_p2: 'Bersama dengan pandangan aerodinamik dari Bahagian 1, teknik simulasi Ansys ini membolehkan pendekatan menyeluruh terhadap reka bentuk kipas siling.',
+            tag_blade: 'Pengoptimuman Bilah', tag_sim: 'Simulasi',
+            share_label: 'Kongsi artikel ini:', copy_link: 'Salin Pautan',
+            toc_title: 'Jadual Kandungan', toc_fsi: 'Interaksi Bendalir-Struktur', toc_fsi_types: 'FSI Satu vs Dua Hala',
+            toc_morphing: 'Pembentukan Semula & Pengoptimuman', toc_gradient: 'Kaedah Berasaskan Kecerunan', toc_parametric: 'Kajian Parametrik',
+            toc_acoustics: 'Analisis Akustik', toc_tonal: 'Bunyi Tonal & Jalur Lebar', toc_aero: 'Aeroakustik Berasaskan Simulasi',
+            toc_outcomes: 'Hasil', toc_automation: 'Automasi IS 374', toc_conclusion: 'Kesimpulan',
+            author_widget_title: 'Tentang Pengarang', author_role: 'Jurutera Simulasi CFD · CADFEM India',
+            author_bio: 'Pakar dalam interaksi bendalir-struktur, aeroakustik, dan aliran kerja simulasi automatik menggunakan alat Ansys.',
+            newsletter_title: 'Kekal Dikemas Kini', newsletter_desc: 'Dapatkan pandangan simulasi dan artikel kejuruteraan terkini terus ke peti masuk anda.',
+            email_placeholder: 'anda@email.com', subscribe_btn: 'Langgan →',
+            related_title: 'Artikel Berkaitan',
+            related1_title: 'Cara Mengurangkan Bunyi Dron dengan Ansys Fluent',
+            related2_title: 'Reka Bentuk Kipas Siling dengan Simulasi Ansys Fluent — Bahagian 1',
+            related3_title: 'Peralatan Moden: Bagaimana CFD Meningkatkan Prestasi & Kecekapan',
+            related4_title: 'Memudahkan Pengendalian Bahan Pukal dengan Ansys Rocky',
+            related_blogs_title: 'Blog Berkaitan', view_all: 'Lihat Semua ➜',
+            footer_desc: 'Membolehkan jurutera dan saintis menyelesaikan masalah kompleks dengan simulasi. Rakan Saluran Ansys merentasi Asia-Pasifik.',
+            footer_blog: 'Blog', footer_case: 'Kajian Kes', footer_tutorials: 'Tutorial',
+            footer_company: 'Syarikat', footer_about: 'Tentang CADFEM', footer_careers: 'Kerjaya', footer_contact: 'Hubungi', footer_sitemap: 'Peta Laman',
+            footer_legal: 'Undang-undang', footer_legal_notices: 'Notis Undang-undang', footer_privacy: 'Dasar Privasi', footer_terms: 'Terma Penggunaan', footer_cookie: 'Dasar Kuki', footer_export: 'Kawalan Eksport',
+            footer_copy: '© Hak Cipta 2026 oleh CADFEM APAC', link_copied: 'Pautan disalin!'
+        },
+        th: {
+            flag: '🇹🇭', name: 'ภาษาไทย',
+            nav_home: 'หน้าแรก', nav_articles: 'บทความ', nav_webinars: 'เว็บบินาร์', nav_products: 'ผลิตภัณฑ์', nav_about: 'เกี่ยวกับ',
+            breadcrumb_current: 'การจำลองการไหลของพัดลมเพดาน',
+            category: 'การจำลอง CFD',
+            article_title: 'วิศวกรรมการไหลของอากาศที่มีประสิทธิภาพด้วยการจำลอง: ข้อมูลเชิงลึกด้านโครงสร้าง การปรับให้เหมาะสม & เสียงสำหรับการออกแบบพัดลมเพดาน',
+            read_time: '06:30 นาที อ่าน', pub_date: '23 มกราคม 2569', views: 'ครั้งที่เข้าชม',
+            hero_alt: 'การจำลองการไหลของพัดลมเพดาน — แบนเนอร์',
+            intro_p1: 'ใน <em><strong><a href="#">ส่วนที่ 1</a></strong></em> ของซีรีส์บล็อกนี้ เราได้สำรวจว่าการจำลองการไหลของพัดลมเพดานโดยใช้ Ansys Fluent ช่วยให้สามารถทำนายการไหลของอากาศได้อย่างแม่นยำตามมาตรฐาน IS 374',
+            intro_p2: 'ใน <em>ส่วนที่ 2</em> นี้ เราเจาะลึกเกี่ยวกับปฏิกิริยาของไหล-โครงสร้าง การปรับใบพัดให้เหมาะสม อะคูสติก และการทำให้การจำลองเป็นอัตโนมัติ',
+            fsi_title: 'การวิเคราะห์ปฏิกิริยาของไหล-โครงสร้าง (FSI) ของใบพัดลมเพดาน',
+            fsi_p1: 'ระหว่างการทำงาน ใบพัดลมเพดานไม่เพียงแต่ต้องรับแรงทางอากาศพลศาสตร์ แต่ยังต้องรับ <strong>น้ำหนักตัวเองและแรงหนีศูนย์กลาง</strong> ด้วย',
+            fsi_p2: 'ภายใต้การรับแรงของของไหล ใบพัดจะเปลี่ยนรูป ซึ่งส่งผลโดยตรงต่อความแม่นยำของ <strong>การจำลองการไหลของพัดลมเพดาน</strong>',
+            fsi_types_title: 'FSI ทางเดียว vs สองทาง',
+            oneway_badge: 'FSI 1 ทาง', oneway_title: 'การเชื่อมต่อแบบทิศทางเดียว',
+            oneway_desc: 'ถ่ายโอนข้อมูลความดันจากตัวแก้ปัญหาของไหลไปยังตัวแก้ปัญหาโครงสร้างเพื่อประเมินการเสียรูปเนื่องจากแรงของไหล',
+            twoway_badge: 'FSI 2 ทาง', twoway_title: 'การเชื่อมต่อระบบ',
+            twoway_desc: 'ผ่าน Ansys System Coupling <strong>Ansys Fluent และ Ansys Mechanical แลกเปลี่ยนข้อมูลซ้ำๆ</strong> เพื่อทำนายการเสียรูปของใบพัดในสภาวะสมดุล',
+            fig1_caption: 'รูปที่ 1: แพลตฟอร์ม Ansys Workbench สำหรับการเชื่อมต่อระบบ Fluent & Mechanical Solver',
+            morphing_title: 'การเปลี่ยนรูปร่างโดยใช้การปรับให้เหมาะสมแบบ Gradient',
+            morphing_p1: 'นักออกแบบต้องการโปรไฟล์ใบพัดที่ <strong>เพิ่มการไหลของอากาศและประสิทธิภาพสูงสุดในขณะที่รักษาความสมบูรณ์ของโครงสร้าง</strong>',
+            gradient_title: 'การปรับให้เหมาะสมแบบ Gradient',
+            gradient_p1: '<strong>ตัวแก้ปัญหาแบบ Gradient</strong> โดยทั่วไปใช้ <strong>วิธี adjoint</strong> เพื่อคำนวณความไวของตัวชี้วัดประสิทธิภาพต่อการเปลี่ยนแปลงทางเรขาคณิต',
+            gradient_p2: 'เมื่อทราบพื้นที่ที่ไวต่อการเปลี่ยนแปลง <strong>การเปลี่ยนรูปร่าง</strong> จะปรับเปลี่ยน mesh ในพื้นที่นั้น กระบวนการนี้ทำซ้ำๆ:',
+            li1: 'ระบุพื้นที่ที่ไว', li2: 'เปลี่ยนรูปร่างเรขาคณิตของใบพัด', li3: 'จำลองประสิทธิภาพใหม่', li4: 'ทำซ้ำจนกว่าจะบรรลุเกณฑ์ที่เหมาะสม',
+            callout_label: 'ข้อมูลเชิงลึกสำคัญ:', callout_text: 'วิธีนี้มักเผยให้เห็น <strong>การปรับปรุงการออกแบบที่การกวาดพารามิเตอร์แบบดั้งเดิมอาจพลาด</strong>',
+            fig2_caption: 'รูปที่ 2: การเปลี่ยนรูปร่าง — เรขาคณิตพื้นฐานสีเทา & เรขาคณิตที่เปลี่ยนแล้วสีเขียว',
+            fig3_caption: 'รูปที่ 3: กราฟแสดงการลดลงของค่าที่สังเกต (แรงบิด) สำหรับรูปร่างที่ปรับให้เหมาะสมแต่ละแบบ',
+            parametric_title: 'การปรับใบพัดให้เหมาะสมผ่านการศึกษาพารามิเตอร์',
+            parametric_p1: 'นอกเหนือจากวิธีแบบ Gradient <strong>การปรับให้เหมาะสมแบบพารามิเตอร์หลายวัตถุประสงค์</strong> ช่วยให้สามารถสำรวจการเปลี่ยนแปลงทางเรขาคณิตได้อย่างเป็นระบบ',
+            acoustics_title: 'การวิเคราะห์อะคูสติกของพัดลมเพดาน',
+            acoustics_p1: 'อะคูสติกกลายเป็นตัวสร้างความแตกต่างสำคัญในเครื่องใช้ไฟฟ้าสมัยใหม่ พัดลมเพดานถูกใช้เป็นเวลานาน',
+            acoustics_p2: 'จากมุมมองฟิสิกส์ เสียงรบกวนเป็นคลื่นความดันอะคูสติก เสียงพัดลมสามารถจำแนกเป็น <strong>เสียงทางอากาศ</strong> หรือ <strong>เสียงทางโครงสร้าง</strong>',
+            tonal_title: '1. ลักษณะเสียงรบกวนแบบโทนและแบบกว้าง',
+            tonal_p1: 'เสียงรบกวนของพัดลมสามารถจำแนกเป็นแบบโทนหรือแบบกว้าง <strong>เสียงโทน</strong> มีลักษณะเป็นสัญญาณแอมพลิจูดสูงที่ความถี่เฉพาะ',
+            aero_title: '2. อะคูสติกอากาศด้วยการจำลอง',
+            aero_p1: 'การศึกษาอะคูสติกเชิงทดลองอาจใช้เวลาและค่าใช้จ่ายสูง การจำลองให้ทางเลือกที่มีประสิทธิภาพ',
+            aero_p2: 'ในการจำลอง CFD มอนิเตอร์ความดันบันทึกการผันผวนของความดัน สัญญาณเหล่านี้สามารถประมวลผลโดยใช้ <strong>Fast Fourier Transformation (FFT)</strong>',
+            prop_title: '3. แนวทางการสร้างแบบจำลองการแพร่กระจายเสียง',
+            prop_p1: 'มีวิธีการหลายอย่างสำหรับการวิเคราะห์การแพร่กระจายเสียง <strong>Computational Aeroacoustics (CAA)</strong> แก้ปัญหาการแพร่กระจายเสียงโดยตรง',
+            outcomes_title: 'ผลลัพธ์ของการวิเคราะห์อะคูสติกอากาศ',
+            out1: 'ข้อมูลการผันผวนของความดัน — ประมวลผลต่อผ่าน FFT ไปยังโดเมนความถี่',
+            out2: 'ระดับความดันเสียง (SPL) dB เทียบกับความถี่', out3: 'SPL ถ่วงน้ำหนัก-A (dBA) เทียบกับแถบออคเทฟ',
+            out4: 'ข้อมูลแหล่งกำเนิดอะคูสติกโดยใช้การวิเคราะห์ DFT', out5: 'การวิเคราะห์ FFT แหล่ง FWH', out6: 'ข้อมูลเสียงของสัญญาณอะคูสติก',
+            fig4_caption: 'รูปที่ 4: SPL เทียบกับความถี่', fig5_caption: 'รูปที่ 5: SPL ถ่วงน้ำหนัก-A dB เทียบกับแถบออคเทฟ', fig6_caption: 'รูปที่ 6: SPL ถ่วงน้ำหนัก-A dB เทียบกับแถบ 1/3 ออคเทฟ',
+            audio_title: 'สัญญาณอะคูสติก — การจำลอง CAA', audio_subtitle: 'ไมโครโฟน 1 · ข้อมูลตัวรับ · รูปแบบ WAV', audio_btn: '▶ เล่นตัวอย่าง',
+            auto_title: 'การทำให้การทดสอบการส่งมอบอากาศ IS 374 เป็นอัตโนมัติโดยใช้ PyFluent',
+            auto_p1: 'เมื่อเวิร์กโฟลว์การจำลองมีความซับซ้อนมากขึ้น การทำให้เป็นอัตโนมัติจึงมีความสำคัญต่อผลิตภาพ',
+            auto_p2: 'การใช้ <strong>PyFluent</strong> เวิร์กโฟลว์การจำลอง IS 374 ทั้งหมดสามารถทำให้เป็นอัตโนมัติได้',
+            conclusion_title: 'สรุป',
+            conclusion_p1: 'การออกแบบพัดลมเพดานที่มีประสิทธิภาพต้องการมากกว่าการปรับการไหลของอากาศให้เหมาะสมเพียงอย่างเดียว ด้วยการรวม FSI การปรับใบพัด อะคูสติกอากาศ และการทำให้การจำลองเป็นอัตโนมัติ',
+            conclusion_p2: 'ร่วมกับข้อมูลเชิงลึกด้านอากาศพลศาสตร์จากส่วนที่ 1 เทคนิคการจำลอง Ansys เหล่านี้ช่วยให้มีแนวทางแบบองค์รวมต่อการออกแบบพัดลมเพดาน',
+            tag_blade: 'การปรับใบพัด', tag_sim: 'การจำลอง',
+            share_label: 'แบ่งปันบทความนี้:', copy_link: 'คัดลอกลิงก์',
+            toc_title: 'สารบัญ', toc_fsi: 'ปฏิกิริยาของไหล-โครงสร้าง', toc_fsi_types: 'FSI ทางเดียว vs สองทาง',
+            toc_morphing: 'การเปลี่ยนรูปร่าง & การปรับให้เหมาะสม', toc_gradient: 'วิธีแบบ Gradient', toc_parametric: 'การศึกษาพารามิเตอร์',
+            toc_acoustics: 'การวิเคราะห์อะคูสติก', toc_tonal: 'เสียงโทน & แบบกว้าง', toc_aero: 'อะคูสติกอากาศด้วยการจำลอง',
+            toc_outcomes: 'ผลลัพธ์', toc_automation: 'ระบบอัตโนมัติ IS 374', toc_conclusion: 'สรุป',
+            author_widget_title: 'เกี่ยวกับผู้เขียน', author_role: 'วิศวกรจำลอง CFD · CADFEM India',
+            author_bio: 'เชี่ยวชาญด้านปฏิกิริยาของไหล-โครงสร้าง อะคูสติกอากาศ และเวิร์กโฟลว์การจำลองอัตโนมัติโดยใช้เครื่องมือ Ansys',
+            newsletter_title: 'อัปเดตอยู่เสมอ', newsletter_desc: 'รับข้อมูลเชิงลึกการจำลองล่าสุดและบทความวิศวกรรมส่งตรงถึงกล่องจดหมายของคุณ',
+            email_placeholder: 'อีเมล@ของคุณ.com', subscribe_btn: 'สมัครสมาชิก →',
+            related_title: 'บทความที่เกี่ยวข้อง',
+            related1_title: 'วิธีลดเสียงโดรนด้วย Ansys Fluent',
+            related2_title: 'การออกแบบพัดลมเพดานด้วยการจำลอง Ansys Fluent — ส่วนที่ 1',
+            related3_title: 'เครื่องใช้ไฟฟ้าสมัยใหม่: CFD ขับเคลื่อนประสิทธิภาพ & ประสิทธิผลอย่างไร',
+            related4_title: 'ทำให้การจัดการวัสดุจำนวนมากง่ายขึ้นด้วย Ansys Rocky',
+            related_blogs_title: 'บล็อกที่เกี่ยวข้อง', view_all: 'ดูทั้งหมด ➜',
+            footer_desc: 'ช่วยให้วิศวกรและนักวิทยาศาสตร์แก้ปัญหาที่ซับซ้อนด้วยการจำลอง พาร์ทเนอร์ช่อง Ansys ทั่วเอเชียแปซิฟิก',
+            footer_blog: 'บล็อก', footer_case: 'กรณีศึกษา', footer_tutorials: 'บทเรียน',
+            footer_company: 'บริษัท', footer_about: 'เกี่ยวกับ CADFEM', footer_careers: 'อาชีพ', footer_contact: 'ติดต่อ', footer_sitemap: 'แผนผังเว็บไซต์',
+            footer_legal: 'กฎหมาย', footer_legal_notices: 'ประกาศทางกฎหมาย', footer_privacy: 'นโยบายความเป็นส่วนตัว', footer_terms: 'ข้อกำหนดการใช้งาน', footer_cookie: 'นโยบายคุกกี้', footer_export: 'การควบคุมการส่งออก',
+            footer_copy: '© ลิขสิทธิ์ 2569 โดย CADFEM APAC', link_copied: 'คัดลอกลิงก์แล้ว!'
+        },
+        vi: {
+            flag: '🇻🇳', name: 'Tiếng Việt',
+            nav_home: 'Trang chủ', nav_articles: 'Bài viết', nav_webinars: 'Hội thảo', nav_products: 'Sản phẩm', nav_about: 'Giới thiệu',
+            breadcrumb_current: 'Mô phỏng luồng khí quạt trần',
+            category: 'Mô phỏng CFD',
+            article_title: 'Kỹ thuật luồng khí hiệu quả với mô phỏng: Cái nhìn về cấu trúc, tối ưu hóa & âm học cho thiết kế quạt trần',
+            read_time: '06:30 phút đọc', pub_date: '23 tháng 1 năm 2026', views: 'lượt xem',
+            hero_alt: 'Mô phỏng luồng khí quạt trần — Banner',
+            intro_p1: 'Trong <em><strong><a href="#">Phần 1</a></strong></em> của loạt bài blog này, chúng tôi đã khám phá cách mô phỏng luồng khí quạt trần sử dụng Ansys Fluent cho phép dự đoán luồng khí chính xác và đánh giá hiệu suất tuân thủ IS 374.',
+            intro_p2: 'Trong <em>Phần 2</em> này, chúng tôi đi sâu hơn vào tương tác chất lỏng-kết cấu, tối ưu hóa cánh quạt, âm học và tự động hóa mô phỏng.',
+            fsi_title: 'Phân tích tương tác chất lỏng-kết cấu (FSI) cánh quạt trần',
+            fsi_p1: 'Trong quá trình vận hành, cánh quạt trần không chỉ chịu tải trọng khí động học mà còn chịu <strong>trọng lượng bản thân và lực ly tâm.</strong> Nếu thiết kế cánh quạt thiếu khả năng kết cấu, những tải trọng này có thể gây ra <strong>biến dạng hoặc hư hỏng không mong muốn.</strong>',
+            fsi_p2: 'Dưới tải trọng chất lỏng, cánh quạt bị biến dạng — thay đổi hình dạng và do đó ảnh hưởng trực tiếp đến độ chính xác của <strong>mô phỏng luồng khí quạt trần.</strong>',
+            fsi_types_title: 'FSI một chiều vs hai chiều',
+            oneway_badge: 'FSI 1 CHIỀU', oneway_title: 'Ghép nối một chiều',
+            oneway_desc: 'Truyền dữ liệu áp suất từ bộ giải chất lỏng đến bộ giải kết cấu để đánh giá biến dạng do tải trọng chất lỏng.',
+            twoway_badge: 'FSI 2 CHIỀU', twoway_title: 'Ghép nối hệ thống',
+            twoway_desc: 'Thông qua Ansys System Coupling, <strong>Ansys Fluent và Ansys Mechanical trao đổi dữ liệu lặp đi lặp lại</strong>, dự đoán biến dạng cánh quạt trong điều kiện cân bằng.',
+            fig1_caption: 'Hình 1: Nền tảng Ansys Workbench để ghép nối hệ thống Fluent & Bộ giải Mechanical',
+            morphing_title: 'Biến đổi hình dạng sử dụng tối ưu hóa dựa trên gradient',
+            morphing_p1: 'Các nhà thiết kế tìm kiếm profile cánh quạt <strong>tối đa hóa luồng khí và hiệu quả trong khi duy trì tính toàn vẹn kết cấu.</strong> Tối ưu hóa tham số truyền thống có thể đòi hỏi tài nguyên tính toán đáng kể.',
+            gradient_title: 'Tối ưu hóa dựa trên Gradient',
+            gradient_p1: '<strong>Bộ giải dựa trên gradient</strong> thường sử dụng <strong>phương pháp adjoint</strong> để tính độ nhạy của các chỉ số hiệu suất đối với những thay đổi hình học.',
+            gradient_p2: 'Khi các vùng nhạy cảm đã được xác định, <strong>Biến đổi hình dạng</strong> sửa đổi lưới cục bộ. Quá trình lặp đi lặp lại:',
+            li1: 'Xác định các vùng nhạy cảm', li2: 'Biến đổi hình học cánh quạt', li3: 'Mô phỏng lại hiệu suất', li4: 'Lặp lại cho đến khi đạt tiêu chí tối ưu',
+            callout_label: 'Thông tin chính:', callout_text: 'Phương pháp này thường tiết lộ <strong>những cải tiến thiết kế mà quét tham số truyền thống có thể bỏ sót</strong> — đặc biệt trong các chế độ dòng chảy phức tạp, phi tuyến.',
+            fig2_caption: 'Hình 2: Biến đổi hình dạng — hình học cơ sở màu xám & hình học đã biến đổi màu xanh',
+            fig3_caption: 'Hình 3: Đồ thị cho thấy sự giảm giá trị quan sát (mô-men xoắn) cho mỗi hình dạng được tối ưu hóa mới',
+            parametric_title: 'Tối ưu hóa cánh quạt thông qua nghiên cứu tham số',
+            parametric_p1: 'Ngoài các phương pháp dựa trên gradient, <strong>tối ưu hóa tham số đa mục tiêu</strong> cho phép khám phá có hệ thống các biến thể hình học.',
+            acoustics_title: 'Phân tích âm học quạt trần',
+            acoustics_p1: 'Âm học đã trở thành yếu tố khác biệt quan trọng trong các thiết bị tiêu dùng hiện đại. Quạt trần được sử dụng trong thời gian dài.',
+            acoustics_p2: 'Từ góc độ vật lý, tiếng ồn là sóng áp suất âm học. Tiếng ồn quạt có thể được phân loại là <strong>tiếng ồn qua không khí</strong> hoặc <strong>tiếng ồn qua kết cấu.</strong>',
+            tonal_title: '1. Đặc điểm tiếng ồn tonal và dải rộng',
+            tonal_p1: 'Tiếng ồn quạt có thể được phân loại là tonal hoặc dải rộng. <strong>Tiếng ồn tonal</strong> được đặc trưng bởi các tín hiệu biên độ cao ở các tần số cụ thể.',
+            aero_title: '2. Khí âm học dựa trên mô phỏng',
+            aero_p1: 'Nghiên cứu âm học thực nghiệm có thể tốn thời gian và chi phí. Mô phỏng cung cấp giải pháp thay thế hiệu quả.',
+            aero_p2: 'Trong mô phỏng CFD, màn hình áp suất ghi lại dao động áp suất. Các tín hiệu này có thể được xử lý hậu kỳ bằng <strong>Fast Fourier Transformation (FFT).</strong>',
+            prop_title: '3. Các phương pháp mô hình hóa lan truyền âm thanh',
+            prop_p1: 'Có nhiều phương pháp để phân tích lan truyền âm thanh. <strong>Computational Aeroacoustics (CAA)</strong> giải quyết trực tiếp sự lan truyền âm thanh. <strong>Phương pháp tích phân</strong> như mô hình FWH giảm chi phí tính toán.',
+            outcomes_title: 'Kết quả phân tích khí âm học',
+            out1: 'Dữ liệu dao động áp suất theo thời gian — xử lý tiếp qua FFT đến miền tần số',
+            out2: 'Mức áp suất âm (SPL) dB theo tần số', out3: 'SPL có trọng số A (dBA) theo dải octave',
+            out4: 'Thông tin nguồn âm học sử dụng phân tích DFT', out5: 'Phân tích FFT nguồn phương pháp FWH', out6: 'Dữ liệu âm thanh của tín hiệu âm học',
+            fig4_caption: 'Hình 4: SPL theo tần số', fig5_caption: 'Hình 5: SPL có trọng số A dB theo dải octave', fig6_caption: 'Hình 6: SPL có trọng số A dB theo dải 1/3 octave',
+            audio_title: 'Tín hiệu âm học — Mô phỏng CAA', audio_subtitle: 'Mic 1 · Dữ liệu đầu thu · Định dạng WAV', audio_btn: '▶ Phát mẫu',
+            auto_title: 'Tự động hóa kiểm tra phân phối khí IS 374 sử dụng PyFluent',
+            auto_p1: 'Khi quy trình mô phỏng ngày càng phức tạp, tự động hóa trở nên thiết yếu cho năng suất.',
+            auto_p2: 'Sử dụng <strong>PyFluent</strong>, toàn bộ quy trình mô phỏng IS 374 có thể được tự động hóa.',
+            conclusion_title: 'Kết luận',
+            conclusion_p1: 'Thiết kế quạt trần hiệu quả và đáng tin cậy đòi hỏi nhiều hơn là chỉ tối ưu hóa luồng khí. Bằng cách tích hợp FSI, tối ưu hóa cánh quạt, khí âm học và tự động hóa mô phỏng, kỹ sư có thể đánh giá thực tế.',
+            conclusion_p2: 'Cùng với những hiểu biết khí động học từ Phần 1, các kỹ thuật mô phỏng Ansys này cho phép tiếp cận toàn diện thiết kế quạt trần.',
+            tag_blade: 'Tối ưu hóa cánh quạt', tag_sim: 'Mô phỏng',
+            share_label: 'Chia sẻ bài viết này:', copy_link: 'Sao chép liên kết',
+            toc_title: 'Mục lục', toc_fsi: 'Tương tác chất lỏng-kết cấu', toc_fsi_types: 'FSI một chiều vs hai chiều',
+            toc_morphing: 'Biến đổi hình dạng & Tối ưu hóa', toc_gradient: 'Phương pháp Gradient', toc_parametric: 'Nghiên cứu tham số',
+            toc_acoustics: 'Phân tích âm học', toc_tonal: 'Tiếng ồn tonal & dải rộng', toc_aero: 'Khí âm học dựa trên mô phỏng',
+            toc_outcomes: 'Kết quả', toc_automation: 'Tự động hóa IS 374', toc_conclusion: 'Kết luận',
+            author_widget_title: 'Về tác giả', author_role: 'Kỹ sư mô phỏng CFD · CADFEM India',
+            author_bio: 'Chuyên gia về tương tác chất lỏng-kết cấu, khí âm học và quy trình mô phỏng tự động sử dụng công cụ Ansys.',
+            newsletter_title: 'Luôn cập nhật', newsletter_desc: 'Nhận những hiểu biết mô phỏng mới nhất và các bài viết kỹ thuật gửi đến hộp thư của bạn.',
+            email_placeholder: 'email@cuaban.com', subscribe_btn: 'Đăng ký →',
+            related_title: 'Bài viết liên quan',
+            related1_title: 'Cách giảm tiếng ồn máy bay không người lái với Ansys Fluent',
+            related2_title: 'Thiết kế quạt trần với mô phỏng Ansys Fluent — Phần 1',
+            related3_title: 'Thiết bị hiện đại: CFD thúc đẩy hiệu suất & hiệu quả như thế nào',
+            related4_title: 'Đơn giản hóa xử lý vật liệu rời với Ansys Rocky',
+            related_blogs_title: 'Blog liên quan', view_all: 'Xem tất cả ➜',
+            footer_desc: 'Hỗ trợ kỹ sư và nhà khoa học giải quyết các vấn đề phức tạp bằng mô phỏng. Đối tác kênh Ansys trên toàn châu Á-Thái Bình Dương.',
+            footer_blog: 'Blog', footer_case: 'Nghiên cứu điển hình', footer_tutorials: 'Hướng dẫn',
+            footer_company: 'Công ty', footer_about: 'Về CADFEM', footer_careers: 'Nghề nghiệp', footer_contact: 'Liên hệ', footer_sitemap: 'Sơ đồ trang',
+            footer_legal: 'Pháp lý', footer_legal_notices: 'Thông báo pháp lý', footer_privacy: 'Chính sách bảo mật', footer_terms: 'Điều khoản sử dụng', footer_cookie: 'Chính sách cookie', footer_export: 'Kiểm soát xuất khẩu',
+            footer_copy: '© Bản quyền 2026 bởi CADFEM APAC', link_copied: 'Đã sao chép liên kết!'
+        }
+    };
+
+    let currentLang = 'en';
+
+    function toggleLangDropdown(e) {
+        e.stopPropagation();
+        document.getElementById('langSwitcher').classList.toggle('open');
+    }
+
+    document.addEventListener('click', function() {
+        document.getElementById('langSwitcher').classList.remove('open');
+    });
+
+    function setLanguage(lang) {
+        if (!translations[lang]) return;
+        currentLang = lang;
+        const t = translations[lang];
+
+        // Update button
+        document.getElementById('currentFlag').textContent = t.flag;
+        document.getElementById('currentLangName').textContent = t.name;
+
+        // Update active state in dropdown
+        document.querySelectorAll('.lang-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.lang === lang);
+        });
+
+        // Update all i18n elements
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key] !== undefined) {
+                el.innerHTML = t[key];
+            }
+        });
+
+        // Update placeholders
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (t[key] !== undefined) {
+                el.placeholder = t[key];
+            }
+        });
+
+        // Close dropdown
+        document.getElementById('langSwitcher').classList.remove('open');
+    }
+    </script>
+
+</body>
+</html>

@@ -1317,7 +1317,10 @@
             }
 
             .header-social {
-                /* display: none; */
+                display: none;
+            }
+            .header-social.footer {
+                display: flex;
             }
 
             .blog-cards {

@@ -1316,11 +1316,11 @@
                 display: none;
             }
 
-            .header-social {
+            header .header-social > a {
                 display: none;
             }
-            .header-social.footer {
-                display: flex;
+            .logo-wrap img{
+                width: 140px;
             }
 
             .blog-cards {

@@ -1349,7 +1349,7 @@
 
         .lang-btn {
             display: flex;
-            align-items: center;
+            align-items: baseline;
             gap: 6px;
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.18);
@@ -1368,7 +1368,7 @@
 
         .lang-btn:hover {
             background: rgba(255,255,255,0.16);
-            border-color: rgba(255,255,255,0.35);
+            border-color: #397dbc9e;
         }
 
         .lang-btn .flag {
